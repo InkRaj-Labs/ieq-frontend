@@ -1,0 +1,27 @@
+===============================================================================
+  IEQ FRONTEND - READY FOR GITHUB & VERCEL
+===============================================================================
+
+ALL FILES EXTRACTED AND READY
+
+NEXT STEPS:
+
+1. Create a new GitHub repo at https://github.com/new
+   Name it "ieq-frontend"
+
+2. Open this folder in Command Prompt and run:
+   git init
+   git add .
+   git commit -m "Initial commit - IEQ mobile frontend"
+   git branch -M main
+   git remote add origin https://github.com/YOUR_USERNAME/ieq-frontend.git
+   git push -u origin main
+
+3. Go to https://vercel.com/new
+   Import your GitHub repo
+   Leave Root Directory BLANK
+   Click Deploy
+
+4. Wait 1-2 minutes and your site is live
+
+===============================================================================
