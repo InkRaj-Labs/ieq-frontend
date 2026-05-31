@@ -1,0 +1,175 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# IEQ Command Center — Full Stack Docker Compose
+# Zero-cost, self-hosted on Windows/Linux with Docker Desktop
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Services:
+#   backend   — FastAPI (port 8000)
+#   postgres  — PostgreSQL (port 5432)
+#   redis     — Redis (port 6379)
+#   qdrant    — Vector DB (port 6333)
+#   nginx     — Reverse proxy (port 80/443)
+#
+# Usage:
+#   docker compose up -d
+#   docker compose logs -f backend
+# ─────────────────────────────────────────────────────────────────────────────
+
+networks:
+  ieq_net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  qdrant_data:
+  uploads_data:
+
+services:
+
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: ieq_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ieqdb
+      POSTGRES_USER: ieq
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ieqpassword}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - ieq_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ieq -d ieqdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis ───────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: ieq_redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - ieq_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ── Qdrant Vector DB ────────────────────────────────────────────────────────
+  qdrant:
+    image: qdrant/qdrant:v1.10.0
+    container_name: ieq_qdrant
+    restart: unless-stopped
+    volumes:
+      - qdrant_data:/qdrant/storage
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    networks:
+      - ieq_net
+    environment:
+      QDRANT__SERVICE__HTTP_PORT: 6333
+      QDRANT__SERVICE__GRPC_PORT: 6334
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:6333/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # ── FastAPI Backend ─────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ieq_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    environment:
+      # App
+      APP_NAME: "IEQ Command Center"
+      DEBUG: "false"
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production-32-chars-min}
+      API_KEY: ${API_KEY:-ieq-local-dev-key}
+
+      # Database
+      DATABASE_URL: postgresql+asyncpg://ieq:${POSTGRES_PASSWORD:-ieqpassword}@postgres:5432/ieqdb
+
+      # Redis
+      REDIS_URL: redis://redis:6379/0
+
+      # Qdrant
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: "6333"
+
+      # LM Studio (host machine)
+      LM_STUDIO_BASE_URL: ${LM_STUDIO_BASE_URL:-http://host.docker.internal:1234/v1}
+      LM_STUDIO_API_KEY: lm-studio
+      DEFAULT_MODEL: ${DEFAULT_MODEL:-local-model}
+
+      # Image Generation
+      IMAGE_BACKEND: ${IMAGE_BACKEND:-mock}
+      A1111_BASE_URL: ${A1111_BASE_URL:-http://host.docker.internal:7860}
+      COMFYUI_BASE_URL: ${COMFYUI_BASE_URL:-http://host.docker.internal:8188}
+
+      # CORS — include your Vercel domain
+      CORS_ORIGINS: >
+        ["http://localhost:3000",
+         "http://localhost:3001",
+         "${VERCEL_URL:-https://ieq-frontend-kc0cdpit3-ink-raj-labs-projects.vercel.app}",
+         "https://*.vercel.app"]
+
+      # File Storage
+      UPLOAD_DIR: /app/uploads
+
+      # Embedding model
+      EMBEDDING_MODEL: all-MiniLM-L6-v2
+
+    volumes:
+      - uploads_data:/app/uploads
+    ports:
+      - "8000:8000"
+    networks:
+      - ieq_net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/ieq/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+
+  # ── Nginx Reverse Proxy ─────────────────────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: ieq_nginx
+    restart: unless-stopped
+    depends_on:
+      - backend
+    volumes:
+      - ./infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infrastructure/nginx/certs:/etc/nginx/certs:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - ieq_net

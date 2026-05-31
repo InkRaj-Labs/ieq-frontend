@@ -1,0 +1,42 @@
+# ── Node / Next.js ────────────────────────────────────────────────────────────
+node_modules/
+.next/
+out/
+build/
+*.local
+
+# ── Python / FastAPI ──────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+dist/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.coverage
+
+# ── Environment ───────────────────────────────────────────────────────────────
+.env
+.env.local
+.env.production
+# Keep .env.example (it's a template)
+!.env.example
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+backend/infrastructure/nginx/certs/
+*.pem
+
+# ── Uploads & Generated ──────────────────────────────────────────────────────
+backend/uploads/
+uploads/
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp

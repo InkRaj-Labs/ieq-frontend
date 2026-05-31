@@ -1,0 +1,41 @@
+# IEQ Backend — Python Dependencies
+# All zero-cost, self-hosted
+
+# ── Web Framework ─────────────────────────────────────────────────────────────
+fastapi==0.111.1
+uvicorn[standard]==0.30.1
+python-multipart==0.0.9
+pydantic==2.7.4
+pydantic-settings==2.3.4
+
+# ── Database ──────────────────────────────────────────────────────────────────
+sqlalchemy[asyncio]==2.0.31
+asyncpg==0.29.0
+alembic==1.13.2
+
+# ── Vector Database ───────────────────────────────────────────────────────────
+qdrant-client==1.10.1
+
+# ── HTTP Client ───────────────────────────────────────────────────────────────
+httpx==0.27.0
+
+# ── Embeddings (local, zero cost) ─────────────────────────────────────────────
+sentence-transformers==3.0.1
+
+# ── Document Processing ───────────────────────────────────────────────────────
+pypdf==4.2.0
+python-docx==1.1.2
+pdfplumber==0.11.2
+
+# ── System Monitoring ─────────────────────────────────────────────────────────
+psutil==6.0.0
+
+# ── Security ──────────────────────────────────────────────────────────────────
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+slowapi==0.1.9
+
+# ── Utilities ─────────────────────────────────────────────────────────────────
+python-dotenv==1.0.1
+aiofiles==24.1.0
+orjson==3.10.6
